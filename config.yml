@@ -5,6 +5,7 @@
 # type: NORMAL, FLAT, LARGE_BIOMES, AMPLIFIED, CUSTOMIZED, VERSION_1_1  #
 # environment: NORMAL, NETHER, THE_END                                  #
 # difficulty: PEACEFUL, EASY, NORMAL, HARD                              #
+# gamemode: SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR                    #
 # --------------------------------------------------------------------- #
 
 worlds: {}

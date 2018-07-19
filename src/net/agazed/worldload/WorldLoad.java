@@ -1,26 +1,27 @@
 package net.agazed.worldload;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-import org.bukkit.ChatColor;
-import org.bukkit.Difficulty;
-import org.bukkit.Location;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.World.Environment;
 import org.bukkit.WorldCreator;
 import org.bukkit.WorldType;
+import org.bukkit.Difficulty;
+import org.bukkit.GameMode;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
-import org.bukkit.plugin.java.JavaPlugin;
 
 public class WorldLoad extends JavaPlugin {
-
     List<String> worldlist = new ArrayList<String>();
     List<String> worldlistloaded = new ArrayList<String>();
     List<String> worldlistunloaded = new ArrayList<String>();
+    Map<String,GameMode> world_gamemodes = new HashMap<String,GameMode>();
 
     @Override
     public void onEnable() {
@@ -30,26 +31,33 @@ public class WorldLoad extends JavaPlugin {
         } catch (IOException e) {
             getLogger().info("Failed to submit metrics!");
         }
+    	
         getConfig().options().copyDefaults(true);
         saveConfig();
         if (getConfig().getConfigurationSection("worlds") != null) {
             for (String world : getConfig().getConfigurationSection("worlds").getKeys(false)) {
                 getLogger().info("Preparing level \"" + world + "\"");
+                
                 String type = getConfig().getString("worlds." + world + ".type");
                 String environment = getConfig().getString("worlds." + world + ".environment");
                 Boolean pvp = getConfig().getBoolean("worlds." + world + ".pvp");
                 String difficulty = getConfig().getString("worlds." + world + ".difficulty");
+                String gamemode = getConfig().getString("worlds." + world + ".gamemode");
                 Long seed = getConfig().getLong("worlds." + world + ".seed");
                 Boolean structures = getConfig().getBoolean("worlds." + world + ".generate-structures");
                 Boolean animals = getConfig().getBoolean("worlds." + world + ".spawn-animals");
                 Boolean monsters = getConfig().getBoolean("worlds." + world + ".spawn-monsters");
+                
                 new WorldCreator(world).type(WorldType.valueOf(type)).environment(Environment.valueOf(environment))
                         .seed(seed).generateStructures(structures).createWorld();
                 getServer().getWorld(world).setPVP(pvp);
                 getServer().getWorld(world).setDifficulty(Difficulty.valueOf(difficulty));
                 getServer().getWorld(world).setSpawnFlags(monsters, animals);
-                if (!worldlist.contains(world))
-                    worldlist.add(world);
+                
+                if (!worldlist.contains(world)) {
+                	world_gamemodes.put(world, GameMode.valueOf(gamemode));
+                	worldlist.add(world);
+                }
             }
         }
     }
@@ -116,6 +124,16 @@ public class WorldLoad extends JavaPlugin {
                 return true;
             }
             player.teleport(getServer().getWorld(args[1]).getSpawnLocation());
+            
+            GameMode gm = world_gamemodes.get(args[1]);
+            if (gm == null) {
+            	gm = GameMode.SURVIVAL;
+            }
+            if ((player.getGameMode() == GameMode.CREATIVE)&&(gm != GameMode.CREATIVE)) {
+            	player.getInventory().clear();
+            }
+            player.setGameMode(gm);
+            
             player.sendMessage(ChatColor.GREEN + "Teleported to world \"" + args[1] + "\"");
             return true;
         }
