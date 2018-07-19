@@ -25,13 +25,6 @@ public class WorldLoad extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        try {
-            Metrics metrics = new Metrics(this);
-            metrics.start();
-        } catch (IOException e) {
-            getLogger().info("Failed to submit metrics!");
-        }
-    	
         getConfig().options().copyDefaults(true);
         saveConfig();
         if (getConfig().getConfigurationSection("worlds") != null) {
