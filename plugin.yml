@@ -1,13 +1,13 @@
 name: WorldLoad
-author: Agazed
+author: Agazed and piluke
 description: Load or generate a world
-website: http://www.skylair.net
+website: https://github.com/piluke/WorldLoad
 main: net.agazed.worldload.WorldLoad
-version: 3.0
+version: 4.0
 commands:
   worldload:
     description: Main command for WorldLoad
-    aliases: [wl, worldl]
+    aliases: [wl]
 permissions:
     worldload.help:
         description: Displays help page
@@ -21,17 +21,11 @@ permissions:
     worldload.remove:
         description: Remove a world from the config
         default: op
-    worldload.delete:
-        description: Permanently delete a world's files
-        default: op
     worldload.load:
         description: Load a world one time
         default: op
     worldload.unload:
         description: Unload a world one time
-        default: op
-    worldload.stats:
-        description: Get world statistics
         default: op
     worldload.list:
         description: List your worlds
