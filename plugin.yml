@@ -1,9 +1,9 @@
 name: WorldLoad
-author: Agazed and piluke
+author: piluke, originally by Agazed
 description: Load or generate a world
 website: https://github.com/piluke/WorldLoad
 main: net.agazed.worldload.WorldLoad
-version: 4.0
+version: 4.1
 commands:
   worldload:
     description: Main command for WorldLoad

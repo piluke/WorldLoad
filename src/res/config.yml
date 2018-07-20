@@ -1,0 +1,7 @@
+# ----------------- Possible Values ----------------- #
+# difficulty: PEACEFUL, EASY, NORMAL, HARD            #
+# gamemode: SURVIVAL, CREATIVE, ADVENTURE, SPECTATOR  #
+# --------------------------------------------------- #
+
+worlds: {}
+players: {}
