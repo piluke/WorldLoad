@@ -21,18 +21,22 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.ChatColor;
 
 public class WorldLoad extends JavaPlugin {
-	public FileConfiguration config = null;
 	public static String version = "WorldLoad v4.1";
-
-	private File configurationFile = null;
 	private static Logger logger = Logger.getLogger("minecraft");
+
+	public FileConfiguration config = null;
+	public FileConfiguration players = null;
+	private File configFile = null;
+	private File playersFile = null;
 
 	public void onEnable() {
 		getServer().getPluginManager().registerEvents(new WorldLoadPlayerListener(this), this);
 
 		this.getCommand("worldload").setExecutor(new WorldLoadCommand(this));
+		this.getCommand("worldload").setTabCompleter(new WorldLoadCommand(this));
 
 		createDefaultConfig(getDataFolder(), "config.yml");
+		createDefaultConfig(getDataFolder(), "players.yml");
 		reloadConfig();
 		load();
 
@@ -40,7 +44,9 @@ public class WorldLoad extends JavaPlugin {
 	}
 	public void onDisable() {
 		this.config = null;
-		this.configurationFile = null;
+		this.players = null;
+		this.configFile = null;
+		this.playersFile = null;
 
 		log("Disabled!");
 	}
@@ -58,16 +64,30 @@ public class WorldLoad extends JavaPlugin {
 	}
 
 	public void reloadConfig() {
-		if (this.configurationFile == null) {
-			this.configurationFile = new File(getDataFolder(), "config.yml");
+		// Config file
+		if (this.configFile == null) {
+			this.configFile = new File(getDataFolder(), "config.yml");
 		}
 
-		this.config = YamlConfiguration.loadConfiguration(this.configurationFile);
+		this.config = YamlConfiguration.loadConfiguration(this.configFile);
 		InputStream defConfigStream = getResource("config.yml");
 		if (defConfigStream != null) {
 			InputStreamReader defConfigReader = new InputStreamReader(defConfigStream);
 			YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigReader);
 			this.config.setDefaults(defConfig);
+		}
+
+		// Player data file
+		if (this.playersFile == null) {
+			this.playersFile = new File(getDataFolder(), "players.yml");
+		}
+
+		this.players= YamlConfiguration.loadConfiguration(this.playersFile);
+		InputStream defPlayersStream = getResource("players.yml");
+		if (defPlayersStream != null) {
+			InputStreamReader defPlayersReader = new InputStreamReader(defPlayersStream);
+			YamlConfiguration defPlayers = YamlConfiguration.loadConfiguration(defPlayersReader);
+			this.config.setDefaults(defPlayers);
 		}
 	}
 	private void createDefaultConfig(File dir, String name) {
@@ -102,15 +122,26 @@ public class WorldLoad extends JavaPlugin {
 		}
 	}
 	public void saveConfig() {
-		if ((this.config == null)||(this.configurationFile == null)) {
-			log(String.format("Could not save config"));
+		if (
+			(this.config == null)
+			||(this.players == null)
+			||(this.configFile == null)
+			||(this.playersFile == null)
+		) {
+			log("Could not save config");
 			return;
 		}
 
 		try {
-			this.config.save(this.configurationFile);
+			this.config.save(this.configFile);
 		} catch (IOException ex) {
-			log(String.format("Could not save config to %s: %s", this.configurationFile, ex.getMessage()));
+			log(String.format("Could not save config to %s: %s", this.configFile, ex.getMessage()));
+		}
+
+		try {
+			this.players.save(this.playersFile);
+		} catch (IOException ex) {
+			log(String.format("Could not save player data to %s: %s", this.playersFile, ex.getMessage()));
 		}
 	}    
 

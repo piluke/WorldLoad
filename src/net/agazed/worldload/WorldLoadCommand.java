@@ -1,5 +1,7 @@
 package net.agazed.worldload;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 
 import org.bukkit.WorldCreator;
@@ -8,11 +10,12 @@ import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabCompleter;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent;
 
-public class WorldLoadCommand implements CommandExecutor {
+public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 	private WorldLoad wl = null;
 
 	public WorldLoadCommand(WorldLoad _wl) {
@@ -67,11 +70,11 @@ public class WorldLoadCommand implements CommandExecutor {
 				return true;
 			}
 
-			String p = String.format("players.%s.", player.getUniqueId());
-			this.wl.config.set(p + player.getWorld().getUID(), player.getLocation());
+			String p = String.format("players.%s.locations.", player.getUniqueId());
+			this.wl.players.set(p + player.getWorld().getUID(), player.getLocation());
 			this.wl.saveConfig();
 
-			Location loc = this.wl.config.getSerializable(p + this.wl.getServer().getWorld(world_name).getUID(), Location.class);
+			Location loc = this.wl.players.getSerializable(p + this.wl.getServer().getWorld(world_name).getUID(), Location.class);
 			Location l = this.wl.getServer().getWorld(world_name).getSpawnLocation();
 			if (loc != null) {
 				l = loc;
@@ -237,5 +240,114 @@ public class WorldLoadCommand implements CommandExecutor {
 
 		WorldLoad.senderLog(sender, Level.WARNING, String.format("Unknown subcommand: \"%s\"", args[0]));
 		return true;
+	}
+
+	public List<String> onTabComplete(CommandSender sender, Command cmd, String label, String[] args) {
+		List<String> comp = new ArrayList<String>();
+
+		if (args.length == 1) {
+			String prefix = args[0].toLowerCase();
+			String[] subcmds = {"help", "tp", "create", "remove", "load", "unload", "list", "reload"};
+			for (String c : subcmds) {
+				if (c.startsWith(prefix)) {
+					comp.add(c);
+				}
+			}
+		} else if (args.length > 1) {
+			if (args[0].equalsIgnoreCase("help")) {
+				//
+			} else if (args[0].equalsIgnoreCase("tp")) {
+				if (args.length == 2) {
+					String prefix = args[1].toLowerCase();
+					for (World w : this.wl.getServer().getWorlds()) {
+						String world_name = w.getName();
+						if (world_name.startsWith(prefix)) {
+							comp.add(world_name);
+						}
+					}
+				}
+			} else if (args[0].equalsIgnoreCase("create")) {
+				if (args.length > 2) {
+					String prefix = args[args.length-1].toLowerCase();
+					if (!prefix.contains(":")) {
+						String[] options = {"type:", "env:", "seed:", "gen:", "diff:", "mode:", "pvp:", "animals:", "monsters:"};
+						for (String o : options) {
+							if (o.startsWith(prefix)) {
+								comp.add(o);
+							}
+						}
+					} else {
+						int i = prefix.indexOf(':')+1;
+						String postfix = prefix.substring(i);
+						prefix = prefix.substring(0, i);
+
+						String[] values = {};
+						if (prefix.equals("type:")) {
+							values = new String[] {"normal", "flat", "version_1_1", "large_biomes", "amplified", "customized", "buffet"};
+						} else if (prefix.equals("env:")) {
+							values = new String[] {"normal", "nether", "the_end"};
+						} else if (prefix.equals("seed:")) {
+							//
+						} else if (prefix.equals("diff:")) {
+							values = new String[] {"peaceful", "easy", "normal", "hard"};
+						} else if (prefix.equals("mode:")) {
+							values = new String[] {"creative", "survival", "adventure", "spectator"};
+						} else if (
+							(prefix.equals("gen:"))
+							||(prefix.equals("pvp:"))
+							||(prefix.equals("animals:"))
+							||(prefix.equals("monsters:"))
+						) {
+							values = new String[] {"true", "false"};
+						}
+
+						for (String v : values) {
+							if (v.startsWith(postfix)) {
+								comp.add(prefix+v);
+							}
+						}
+					}
+				}
+			} else if (args[0].equalsIgnoreCase("remove")) {
+				if (args.length == 2) {
+					String prefix = args[1].toLowerCase();
+					for (String world_name : this.wl.config.getConfigurationSection("worlds").getKeys(false)) {
+						if (world_name.startsWith(prefix)) {
+							comp.add(world_name);
+						}
+					}
+				}
+			} else if (args[0].equalsIgnoreCase("load")) {
+				if (args.length == 2) {
+					String prefix = args[1].toLowerCase();
+					for (String world_name : this.wl.config.getConfigurationSection("worlds").getKeys(false)) {
+						if (world_name.startsWith(prefix)) {
+							comp.add(world_name);
+						}
+					}
+				}
+			} else if (args[0].equalsIgnoreCase("unload")) {
+				if (args.length == 2) {
+					String prefix = args[1].toLowerCase();
+					for (String world_name : this.wl.config.getConfigurationSection("worlds").getKeys(false)) {
+						if (world_name.startsWith(prefix)) {
+							comp.add(world_name);
+						}
+					}
+					for (World w: this.wl.getServer().getWorlds()) {
+						String world_name = w.getName();
+						if ((world_name.startsWith(prefix))&&(!comp.contains(world_name))) {
+							comp.add(world_name);
+						}
+					}
+				}
+			} else if (args[0].equalsIgnoreCase("list")) {
+				//
+			} else if (args[0].equalsIgnoreCase("reload")) {
+				//
+			}
+		}
+
+		return comp;
 	}
 }
