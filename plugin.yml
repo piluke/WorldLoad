@@ -4,6 +4,7 @@ description: Load or generate a world
 website: https://github.com/piluke/WorldLoad
 main: net.agazed.worldload.WorldLoad
 version: 4.2
+api-version: 1.13
 commands:
   worldload:
     description: Main command for WorldLoad
@@ -32,4 +33,7 @@ permissions:
         default: op
     worldlist.reload:
         description: Reload the config
+        default: op
+    worldlist.home:
+        description: Set and tp to homes
         default: op

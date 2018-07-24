@@ -39,6 +39,7 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 			sender.sendMessage(String.format("-----%s%s WorldLoad Help %s-----", aq, bold, wh));
 			sender.sendMessage(String.format("%s/worldload %shelp %s- Display this info", aq, gr, wh));
 			sender.sendMessage(String.format("%s/worldload %stp <world> %s- Teleport to a world", aq, gr, wh));
+			sender.sendMessage(String.format("%s/worldload %shome [set|go <world>] %s- Access per-world homes", aq, gr, wh));
 			sender.sendMessage(String.format("%s/worldload %screate <world> %s %s- Create a world", aq, gr, WorldConfig.option_info, wh));
 			sender.sendMessage(String.format("%s/worldload %sremove <world> %s- Remove a world from the config", aq, gr, wh));
 			sender.sendMessage(String.format("%s/worldload %sload <world> %s- Load a world", aq, gr, wh));
@@ -88,6 +89,67 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 
 			WorldLoad.senderLog(player, Level.INFO, String.format("Teleported to world \"%s\"", world_name));
 			return true;
+		} else if (args[0].equalsIgnoreCase("home")) {
+			if (!(sender instanceof Player)) {
+				WorldLoad.senderLog(sender, Level.WARNING, "Command can only be run as a player!");
+				return true;
+			}
+
+			Player player = (Player) sender;
+			if (!player.hasPermission("worldload.home")) {
+				WorldLoad.senderLog(player, Level.WARNING, "No permission!");
+				return true;
+			}
+
+			String p = String.format("players.%s.homes.", player.getUniqueId());
+			if (args.length == 1) {
+				Location home = this.wl.players.getSerializable(p + player.getWorld().getUID(), Location.class);
+				if (home == null) {
+					WorldLoad.senderLog(player, Level.WARNING, "Home not set for this world!");
+					return true;
+				}
+
+				player.teleport(home, PlayerTeleportEvent.TeleportCause.COMMAND);
+
+				WorldLoad.senderLog(player, Level.INFO, String.format("Teleported home"));
+				return true;
+			} else if (args.length > 1)  {
+				if (args[1].equalsIgnoreCase("set")) {
+					this.wl.players.set(p + player.getWorld().getUID(), player.getLocation());
+					this.wl.saveConfig();
+
+					WorldLoad.senderLog(player, Level.INFO, "Home set!");
+					return true;
+				} else if (args[1].equalsIgnoreCase("go")) {
+					if (args.length == 2) {
+						WorldLoad.senderLog(player, Level.WARNING, "Correct usage: /worldload home go <world>");
+						return true;
+					}
+
+					String world_name = args[2];
+					if (this.wl.getServer().getWorld(world_name) == null) {
+						WorldLoad.senderLog(player, Level.WARNING, "World is unloaded!");
+						return true;
+					}
+
+					Location home = this.wl.players.getSerializable(p + this.wl.getServer().getWorld(world_name).getUID(), Location.class);
+					if (home == null) {
+						WorldLoad.senderLog(player, Level.WARNING, "Home not set for this world!");
+						return true;
+					}
+
+					player.teleport(home, PlayerTeleportEvent.TeleportCause.COMMAND);
+
+					WorldLoad.senderLog(player, Level.INFO, String.format("Teleported to world \"%s\" home", world_name));
+					return true;
+				} else {
+					WorldLoad.senderLog(player, Level.WARNING, "Correct usage: /worldload home [set|go <world>]");
+					return true;
+				}
+			} else {
+				WorldLoad.senderLog(player, Level.WARNING, "Correct usage: /worldload home [set|go <world>]");
+				return true;
+			}
 		} else if (args[0].equalsIgnoreCase("create")) {
 			if (!sender.hasPermission("worldload.create")) {
 				WorldLoad.senderLog(sender, Level.WARNING, "No permission!");
@@ -247,7 +309,7 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 
 		if (args.length == 1) {
 			String prefix = args[0].toLowerCase();
-			String[] subcmds = {"help", "tp", "create", "remove", "load", "unload", "list", "reload"};
+			String[] subcmds = {"help", "tp", "home", "create", "remove", "load", "unload", "list", "reload"};
 			for (String c : subcmds) {
 				if (c.startsWith(prefix)) {
 					comp.add(c);
@@ -260,6 +322,24 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 				if (args.length == 2) {
 					String prefix = args[1].toLowerCase();
 					for (World w : this.wl.getServer().getWorlds()) {
+						String world_name = w.getName();
+						if (world_name.startsWith(prefix)) {
+							comp.add(world_name);
+						}
+					}
+				}
+			} else if (args[0].equalsIgnoreCase("home")) {
+				if (args.length == 2) {
+					String prefix = args[1].toLowerCase();
+					String[] subcmds = {"set", "go"};
+					for (String c : subcmds) {
+						if (c.startsWith(prefix)) {
+							comp.add(c);
+						}
+					}
+				} else if (args.length == 3) {
+					String prefix = args[2].toLowerCase();
+					for (World w: this.wl.getServer().getWorlds()) {
 						String world_name = w.getName();
 						if (world_name.startsWith(prefix)) {
 							comp.add(world_name);
