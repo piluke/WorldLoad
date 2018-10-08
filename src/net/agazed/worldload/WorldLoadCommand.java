@@ -2,6 +2,7 @@ package net.agazed.worldload;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.logging.Level;
 
 import org.bukkit.WorldCreator;
@@ -38,6 +39,7 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 
 			sender.sendMessage(String.format("-----%s%s WorldLoad Help %s-----", aq, bold, wh));
 			sender.sendMessage(String.format("%s/worldload %shelp %s- Display this info", aq, gr, wh));
+			sender.sendMessage(String.format("%s/worldload %sinfo %s- Display world info", aq, gr, wh));
 			sender.sendMessage(String.format("%s/worldload %stp <world> %s- Teleport to a world", aq, gr, wh));
 			sender.sendMessage(String.format("%s/worldload %shome [set|go <world>] %s- Access per-world homes", aq, gr, wh));
 			sender.sendMessage(String.format("%s/worldload %screate <world> %s %s- Create a world", aq, gr, WorldConfig.option_info, wh));
@@ -46,6 +48,16 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 			sender.sendMessage(String.format("%s/worldload %sunload <world> %s- Unload a world", aq, gr, wh));
 			sender.sendMessage(String.format("%s/worldload %slist %s- List the configured worlds", aq, gr, wh));
 			sender.sendMessage(String.format("%s/worldload %sreload %s- Reload the config", aq, gr, wh));
+
+			return true;
+		} else if (args[0].equalsIgnoreCase("info")) {
+			if (!(sender instanceof Player)) {
+				WorldLoad.senderLog(sender, Level.WARNING, "Command can only be run as a player!");
+				return true;
+			}
+
+			Player player = (Player) sender;
+			WorldLoad.senderLog(sender, Level.INFO, String.format("World name: %s", player.getWorld().getName()));
 
 			return true;
 		} else if (args[0].equalsIgnoreCase("tp")) {
@@ -72,20 +84,20 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 			}
 
 			String p = String.format("players.%s.locations.", player.getUniqueId());
-			this.wl.players.set(p + player.getWorld().getUID(), player.getLocation());
+			this.setLocation(p + player.getWorld().getUID(), player.getLocation());
 			this.wl.saveConfig();
 
-			Location loc = this.wl.players.getSerializable(p + this.wl.getServer().getWorld(world_name).getUID(), Location.class);
-			Location l = this.wl.getServer().getWorld(world_name).getSpawnLocation();
-			if (loc != null) {
-				l = loc;
+			Location loc2 = this.wl.getServer().getWorld(world_name).getSpawnLocation();
+			UUID wid2 = this.wl.getServer().getWorld(world_name).getUID();
+			if (this.wl.players.contains(p + wid2)) {
+				loc2 = this.getLocation(p + wid2);
 			} else {
 				Location bed = player.getBedSpawnLocation();
-				if ((bed != null)&&(bed.getWorld().equals(l.getWorld()))) {
-					l = bed;
+				if ((bed != null)&&(bed.getWorld().equals(loc2.getWorld()))) {
+					loc2 = bed;
 				}
 			}
-			player.teleport(l, PlayerTeleportEvent.TeleportCause.COMMAND);
+			player.teleport(loc2, PlayerTeleportEvent.TeleportCause.COMMAND);
 
 			WorldLoad.senderLog(player, Level.INFO, String.format("Teleported to world \"%s\"", world_name));
 			return true;
@@ -103,7 +115,7 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 
 			String p = String.format("players.%s.homes.", player.getUniqueId());
 			if (args.length == 1) {
-				Location home = this.wl.players.getSerializable(p + player.getWorld().getUID(), Location.class);
+				Location home = this.getLocation(p + player.getWorld().getUID());
 				if (home == null) {
 					WorldLoad.senderLog(player, Level.WARNING, "Home not set for this world!");
 					return true;
@@ -115,7 +127,7 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 				return true;
 			} else if (args.length > 1)  {
 				if (args[1].equalsIgnoreCase("set")) {
-					this.wl.players.set(p + player.getWorld().getUID(), player.getLocation());
+					this.setLocation(p + player.getWorld().getUID(), player.getLocation());
 					this.wl.saveConfig();
 
 					WorldLoad.senderLog(player, Level.INFO, "Home set!");
@@ -132,7 +144,7 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 						return true;
 					}
 
-					Location home = this.wl.players.getSerializable(p + this.wl.getServer().getWorld(world_name).getUID(), Location.class);
+					Location home = this.getLocation(p + this.wl.getServer().getWorld(world_name).getUID());
 					if (home == null) {
 						WorldLoad.senderLog(player, Level.WARNING, "Home not set for this world!");
 						return true;
@@ -294,7 +306,6 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 
 			if (args.length == 1) {
 				this.wl.reloadConfig();
-				this.wl.load();
 				WorldLoad.senderLog(sender, Level.INFO, "Successfully reloaded config!");
 				return true;
 			}
@@ -302,6 +313,24 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 
 		WorldLoad.senderLog(sender, Level.WARNING, String.format("Unknown subcommand: \"%s\"", args[0]));
 		return true;
+	}
+	private void setLocation(String key, Location loc) {
+		this.wl.players.set(key + ".world", loc.getWorld().getName());
+		this.wl.players.set(key + ".x", loc.getX());
+		this.wl.players.set(key + ".y", loc.getY());
+		this.wl.players.set(key + ".z", loc.getZ());
+		this.wl.players.set(key + ".yaw", loc.getYaw());
+		this.wl.players.set(key + ".pitch", loc.getPitch());
+	}
+	private Location getLocation(String key) {
+		if (this.wl.players.contains(key)) {
+			return new Location(
+				this.wl.getServer().getWorld((String) this.wl.players.get(key + ".world")),
+				this.wl.players.getDouble(key + ".x"), this.wl.players.getDouble(key + ".y"), this.wl.players.getDouble(key + ".z"),
+				(float) this.wl.players.getDouble(key + ".yaw"), (float) this.wl.players.getDouble(key + ".pitch")
+			);
+		}
+		return null;
 	}
 
 	public List<String> onTabComplete(CommandSender sender, Command cmd, String label, String[] args) {
@@ -317,6 +346,8 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 			}
 		} else if (args.length > 1) {
 			if (args[0].equalsIgnoreCase("help")) {
+				//
+			} else if (args[0].equalsIgnoreCase("info")) {
 				//
 			} else if (args[0].equalsIgnoreCase("tp")) {
 				if (args.length == 2) {

@@ -3,7 +3,7 @@ author: piluke, originally by Agazed
 description: Load or generate a world
 website: https://github.com/piluke/WorldLoad
 main: net.agazed.worldload.WorldLoad
-version: 4.2
+version: 4.3
 api-version: 1.13
 commands:
   worldload:

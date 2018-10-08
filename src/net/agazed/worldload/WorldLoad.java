@@ -38,7 +38,6 @@ public class WorldLoad extends JavaPlugin {
 		createDefaultConfig(getDataFolder(), "config.yml");
 		createDefaultConfig(getDataFolder(), "players.yml");
 		reloadConfig();
-		load();
 
 		log("Enabled!");
 	}
@@ -77,12 +76,14 @@ public class WorldLoad extends JavaPlugin {
 			this.config.setDefaults(defConfig);
 		}
 
+		load(); // Load worlds for proper player Location deserialization
+
 		// Player data file
 		if (this.playersFile == null) {
 			this.playersFile = new File(getDataFolder(), "players.yml");
 		}
 
-		this.players= YamlConfiguration.loadConfiguration(this.playersFile);
+		this.players = YamlConfiguration.loadConfiguration(this.playersFile);
 		InputStream defPlayersStream = getResource("players.yml");
 		if (defPlayersStream != null) {
 			InputStreamReader defPlayersReader = new InputStreamReader(defPlayersStream);
