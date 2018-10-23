@@ -13,6 +13,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.WorldCreator;
 import org.bukkit.Difficulty;
 import org.bukkit.GameMode;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.ConfigurationSection;
@@ -172,5 +173,24 @@ public class WorldLoad extends JavaPlugin {
 
 	public GameMode getGameMode(String world_name) {
 		return GameMode.valueOf(this.config.getString(String.format("worlds.%s.gamemode", world_name), "SURVIVAL"));
+	}
+
+	public void setLocation(String key, Location loc) {
+		this.players.set(key + ".world", loc.getWorld().getName());
+		this.players.set(key + ".x", loc.getX());
+		this.players.set(key + ".y", loc.getY());
+		this.players.set(key + ".z", loc.getZ());
+		this.players.set(key + ".yaw", loc.getYaw());
+		this.players.set(key + ".pitch", loc.getPitch());
+	}
+	public Location getLocation(String key) {
+		if (this.players.contains(key)) {
+			return new Location(
+				this.getServer().getWorld((String) this.players.get(key + ".world")),
+				this.players.getDouble(key + ".x"), this.players.getDouble(key + ".y"), this.players.getDouble(key + ".z"),
+				(float) this.players.getDouble(key + ".yaw"), (float) this.players.getDouble(key + ".pitch")
+			);
+		}
+		return null;
 	}
 }

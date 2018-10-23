@@ -3,7 +3,7 @@ author: piluke, originally by Agazed
 description: Load or generate a world
 website: https://github.com/piluke/WorldLoad
 main: net.agazed.worldload.WorldLoad
-version: 4.3
+version: 4.4
 api-version: 1.13
 commands:
   worldload:
@@ -12,6 +12,9 @@ commands:
 permissions:
     worldload.help:
         description: Displays help page
+        default: op
+    worldload.info:
+        description: Displays world info
         default: op
     worldload.tp:
         description: Teleport to a world

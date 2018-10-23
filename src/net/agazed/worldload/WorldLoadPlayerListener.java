@@ -14,6 +14,7 @@ import java.util.logging.Level;
 
 import org.bukkit.GameMode;
 import org.bukkit.Location;
+import org.bukkit.TravelAgent;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.WorldCreator;
@@ -97,37 +98,56 @@ public class WorldLoadPlayerListener implements Listener {
 	@EventHandler(priority=EventPriority.NORMAL)
 	public void onPlayerPortal(PlayerPortalEvent event) {
 		if ((event.getCause() == TeleportCause.NETHER_PORTAL)||(event.getCause() == TeleportCause.END_PORTAL)) {
-			event.useTravelAgent(true);
-			if (event.getTo() == null) {
-				Location loc = event.getPlayer().getLocation();
-				String w = loc.getWorld().getName();
-				if (event.getCause() == TeleportCause.NETHER_PORTAL) {
-					if (loc.getWorld().getEnvironment() != Environment.NETHER) {
-						w += "_nether";
-					} else {
-						w = w.substring(0, w.length() - "_nether".length());
-					}
+			Player player = event.getPlayer();
+			String lockey = String.format("players.%s.locations.", player.getUniqueId());
+
+			Location loc = player.getLocation();
+			String w = loc.getWorld().getName();
+			if (event.getCause() == TeleportCause.NETHER_PORTAL) {
+				if (loc.getWorld().getEnvironment() != Environment.NETHER) {
+					this.wl.setLocation(lockey + player.getWorld().getUID(), loc);
+
+					w += "_nether";
+					loc.setX(Math.floor(loc.getX()/8.0));
+					loc.setZ(Math.floor(loc.getZ()/8.0));
 				} else {
-					if (loc.getWorld().getEnvironment() != Environment.THE_END) {
-						w += "_the_end";
-					} else {
-						w = w.substring(0, w.length() - "_the_end".length());
-					}
-				}
+					w = w.substring(0, w.length() - "_nether".length());
 
-				World world = this.wl.getServer().getWorld(w);
-				if (world == null) {
-					Environment env = Environment.NETHER;
-					if (event.getCause() == TeleportCause.END_PORTAL) {
-						env = Environment.THE_END;
-					}
-					WorldLoad.senderLog(event.getPlayer(), Level.INFO, "Preparing teleport...");
-					world = new WorldCreator(w).environment(env).createWorld();
+					loc = null;
 				}
-
-				loc.setWorld(world);
-				event.setTo(loc);
+			} else {
+				if (loc.getWorld().getEnvironment() != Environment.THE_END) {
+					w += "_the_end";
+				} else {
+					w = w.substring(0, w.length() - "_the_end".length());
+				}
 			}
+
+			World world = this.wl.getServer().getWorld(w);
+			if (world == null) {
+				Environment env = Environment.NETHER;
+				if (event.getCause() == TeleportCause.END_PORTAL) {
+					env = Environment.THE_END;
+				}
+				WorldLoad.senderLog(event.getPlayer(), Level.INFO, "Preparing teleport...");
+				world = new WorldCreator(w).environment(env).createWorld();
+			}
+
+			if (loc == null) {
+				Location _loc = this.wl.getLocation(lockey+world.getUID());
+				if ((_loc == null)) {
+					loc = player.getLocation();
+					loc.setX(loc.getX()*8.0);
+					loc.setZ(loc.getZ()*8.0);
+				} else {
+					loc = _loc;
+				}
+			}
+			loc.setWorld(world);
+
+			event.useTravelAgent(true);
+			TravelAgent ta = event.getPortalTravelAgent();
+			event.setTo(ta.findOrCreate(loc));
 		}
 	}
 	@EventHandler(priority=EventPriority.NORMAL)

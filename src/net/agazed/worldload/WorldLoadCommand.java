@@ -13,6 +13,7 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 import org.bukkit.event.player.PlayerTeleportEvent;
 
@@ -39,7 +40,7 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 
 			sender.sendMessage(String.format("-----%s%s WorldLoad Help %s-----", aq, bold, wh));
 			sender.sendMessage(String.format("%s/worldload %shelp %s- Display this info", aq, gr, wh));
-			sender.sendMessage(String.format("%s/worldload %sinfo %s- Display world info", aq, gr, wh));
+			sender.sendMessage(String.format("%s/worldload %sinfo [<world>]%s- Display world info", aq, gr, wh));
 			sender.sendMessage(String.format("%s/worldload %stp <world> %s- Teleport to a world", aq, gr, wh));
 			sender.sendMessage(String.format("%s/worldload %shome [set|go <world>] %s- Access per-world homes", aq, gr, wh));
 			sender.sendMessage(String.format("%s/worldload %screate <world> %s %s- Create a world", aq, gr, WorldConfig.option_info, wh));
@@ -51,13 +52,49 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 
 			return true;
 		} else if (args[0].equalsIgnoreCase("info")) {
-			if (!(sender instanceof Player)) {
-				WorldLoad.senderLog(sender, Level.WARNING, "Command can only be run as a player!");
+			World w = null;
+			GameMode gm = null;
+			if (args.length > 1) {
+				w = this.wl.getServer().getWorld(args[1]);
+			} else if (sender instanceof Player) {
+				Player player = (Player) sender;
+				if (!player.hasPermission("worldload.info")) {
+					WorldLoad.senderLog(player, Level.WARNING, "No permission!");
+					return true;
+				}
+
+				w = player.getWorld();
+				gm = player.getGameMode();
+			}
+
+			if (w == null) {
+				WorldLoad.senderLog(sender, Level.WARNING, "Invalid world name!");
 				return true;
 			}
 
-			Player player = (Player) sender;
-			WorldLoad.senderLog(sender, Level.INFO, String.format("World name: %s", player.getWorld().getName()));
+			WorldLoad.senderLog(sender, Level.INFO, String.format(
+				"%s {\n" +
+				"    type: %s\n" +
+				"    env: %s\n" +
+				"    seed: %d\n" +
+				"    gen: %b\n" +
+				"    diff: %s\n" +
+				"    gamemode: %s\n" +
+				"    pvp: %b\n" +
+				"    spawn_animals: %b\n" +
+				"    spawn_monsters: %b\n" +
+				"}",
+				w.getName(),
+				w.getWorldType().toString(),
+				w.getEnvironment().toString(),
+				w.getSeed(),
+				w.canGenerateStructures(),
+				w.getDifficulty().toString(),
+				(gm != null) ? gm.toString() : "UNKNOWN",
+				w.getPVP(),
+				w.getAllowAnimals(),
+				w.getAllowMonsters()
+			));
 
 			return true;
 		} else if (args[0].equalsIgnoreCase("tp")) {
@@ -84,13 +121,13 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 			}
 
 			String p = String.format("players.%s.locations.", player.getUniqueId());
-			this.setLocation(p + player.getWorld().getUID(), player.getLocation());
+			this.wl.setLocation(p + player.getWorld().getUID(), player.getLocation());
 			this.wl.saveConfig();
 
 			Location loc2 = this.wl.getServer().getWorld(world_name).getSpawnLocation();
 			UUID wid2 = this.wl.getServer().getWorld(world_name).getUID();
 			if (this.wl.players.contains(p + wid2)) {
-				loc2 = this.getLocation(p + wid2);
+				loc2 = this.wl.getLocation(p + wid2);
 			} else {
 				Location bed = player.getBedSpawnLocation();
 				if ((bed != null)&&(bed.getWorld().equals(loc2.getWorld()))) {
@@ -115,7 +152,7 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 
 			String p = String.format("players.%s.homes.", player.getUniqueId());
 			if (args.length == 1) {
-				Location home = this.getLocation(p + player.getWorld().getUID());
+				Location home = this.wl.getLocation(p + player.getWorld().getUID());
 				if (home == null) {
 					WorldLoad.senderLog(player, Level.WARNING, "Home not set for this world!");
 					return true;
@@ -127,7 +164,7 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 				return true;
 			} else if (args.length > 1)  {
 				if (args[1].equalsIgnoreCase("set")) {
-					this.setLocation(p + player.getWorld().getUID(), player.getLocation());
+					this.wl.setLocation(p + player.getWorld().getUID(), player.getLocation());
 					this.wl.saveConfig();
 
 					WorldLoad.senderLog(player, Level.INFO, "Home set!");
@@ -144,7 +181,7 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 						return true;
 					}
 
-					Location home = this.getLocation(p + this.wl.getServer().getWorld(world_name).getUID());
+					Location home = this.wl.getLocation(p + this.wl.getServer().getWorld(world_name).getUID());
 					if (home == null) {
 						WorldLoad.senderLog(player, Level.WARNING, "Home not set for this world!");
 						return true;
@@ -314,31 +351,13 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 		WorldLoad.senderLog(sender, Level.WARNING, String.format("Unknown subcommand: \"%s\"", args[0]));
 		return true;
 	}
-	private void setLocation(String key, Location loc) {
-		this.wl.players.set(key + ".world", loc.getWorld().getName());
-		this.wl.players.set(key + ".x", loc.getX());
-		this.wl.players.set(key + ".y", loc.getY());
-		this.wl.players.set(key + ".z", loc.getZ());
-		this.wl.players.set(key + ".yaw", loc.getYaw());
-		this.wl.players.set(key + ".pitch", loc.getPitch());
-	}
-	private Location getLocation(String key) {
-		if (this.wl.players.contains(key)) {
-			return new Location(
-				this.wl.getServer().getWorld((String) this.wl.players.get(key + ".world")),
-				this.wl.players.getDouble(key + ".x"), this.wl.players.getDouble(key + ".y"), this.wl.players.getDouble(key + ".z"),
-				(float) this.wl.players.getDouble(key + ".yaw"), (float) this.wl.players.getDouble(key + ".pitch")
-			);
-		}
-		return null;
-	}
 
 	public List<String> onTabComplete(CommandSender sender, Command cmd, String label, String[] args) {
 		List<String> comp = new ArrayList<String>();
 
 		if (args.length == 1) {
 			String prefix = args[0].toLowerCase();
-			String[] subcmds = {"help", "tp", "home", "create", "remove", "load", "unload", "list", "reload"};
+			String[] subcmds = {"help", "info", "tp", "home", "create", "remove", "load", "unload", "list", "reload"};
 			for (String c : subcmds) {
 				if (c.startsWith(prefix)) {
 					comp.add(c);
@@ -348,7 +367,15 @@ public class WorldLoadCommand implements CommandExecutor, TabCompleter {
 			if (args[0].equalsIgnoreCase("help")) {
 				//
 			} else if (args[0].equalsIgnoreCase("info")) {
-				//
+				if (args.length == 2) {
+					String prefix = args[1].toLowerCase();
+					for (World w : this.wl.getServer().getWorlds()) {
+						String world_name = w.getName();
+						if (world_name.startsWith(prefix)) {
+							comp.add(world_name);
+						}
+					}
+				}
 			} else if (args[0].equalsIgnoreCase("tp")) {
 				if (args.length == 2) {
 					String prefix = args[1].toLowerCase();

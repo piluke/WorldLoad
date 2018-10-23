@@ -13,7 +13,7 @@ import org.bukkit.command.CommandSender;
 public class WorldConfig {
 	WorldType type = WorldType.NORMAL;
 	Environment environment = Environment.NORMAL;
-	long seed = 0;
+	Long seed = null;
 	boolean generate_structures = true;
 
 	Difficulty difficulty = Difficulty.NORMAL;
@@ -110,7 +110,9 @@ public class WorldConfig {
 		wc
 		  .type(this.type)
 		  .environment(this.environment)
-		  .seed(this.seed)
 		  .generateStructures(this.generate_structures);
+		if (this.seed != null) {
+			wc.seed(this.seed);
+		}
 	}
 }
